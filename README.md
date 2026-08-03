@@ -24,7 +24,8 @@ Nie da się praktycznie znaleźć hasła i liczby, które odtworzą dowolny, wcz
 
 ```mermaid
 flowchart TD
-    A["Dwie talie kart<br/>Czas kliknięć<br/>Opcjonalny salt"] --> B["SeedGenerator"]
+    START(("Start")) --> A["Dwie talie kart<br/>Czas kliknięć<br/>Opcjonalny salt"]
+    A --> B["SeedGenerator"]
     B --> C["Mnemonic A<br/>24 słowa BIP-39<br/>Entropia: 256 bitów"]
 
     subgraph REV["Warstwa odwracalna"]
