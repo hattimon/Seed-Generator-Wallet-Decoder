@@ -24,42 +24,42 @@ Nie da się praktycznie znaleźć hasła i liczby, które odtworzą dowolny, wcz
 
 ```mermaid
 flowchart TD
-    A["Dwie potasowane talie kart"] --> B["SeedGenerator"]
-    T["Czas kliknięć + opcjonalny salt"] --> B
-    B --> C["Mnemonic A — 24 słowa BIP-39<br/>256 bitów entropii"]
+    A["Dwie talie kart<br/>potasowane"] --> B["SeedGenerator"]
+    T["Czas kliknięć<br/>+ opcjonalny salt"] --> B
+    B --> C["Mnemonic A<br/>24 słowa BIP-39<br/>Entropia: 256 bitów"]
 
     subgraph REV["Warstwa odwracalna"]
         C --> D["Walidacja BIP-39<br/>i odczyt entropii"]
         D --> E["npm run encode"]
-        E --> F["swd1 — base26 a-z<br/>tryb zgodności"]
-        E --> G["swd2 — base52 a-zA-Z<br/>format domyślny"]
-        F --> H["Pełny kod<br/>format:hasło:liczba"]
+        E --> F["swd1<br/>base26: a-z<br/>tryb zgodności"]
+        E --> G["swd2<br/>base52: a-zA-Z<br/>format domyślny"]
+        F --> H["Kod odzyskiwania<br/>3 lub 4 pola"]
         G --> H
         H --> I["npm run decode"]
-        I --> J["Odtworzony Mnemonic A<br/>identyczne 24 słowa"]
+        I --> J["Mnemonic A<br/>odtworzony identycznie<br/>24 słowa"]
     end
 
-    subgraph LEG["Warstwa wallet-decoder — jednokierunkowa"]
-        H --> K["Rozdzielenie kodu na hasło i liczbę"]
-        K --> L["Hasło → SHA-256 → bazowy Seed 0"]
-        K --> M["Liczba → wzorzec binarny"]
-        L --> N["Iteracja po literach hasła"]
+    subgraph LEG["wallet-decoder — przepływ jednokierunkowy"]
+        H --> K["Podział kodu<br/>na hasło i liczbę"]
+        K --> L["Hasło → SHA-256<br/>Bazowy Seed 0"]
+        K --> M["Liczba → wzorzec<br/>binarny"]
+        L --> N["Przetwarzanie<br/>kolejnej litery"]
         M --> N
-        N --> O["Indeks litery 1–26<br/>i ścieżka BIP-44"]
+        N --> O["Indeks litery: 1–26<br/>Ścieżka BIP-44"]
         O --> P{"Bit liczby"}
         P -->|"0"| Q["Klucz prywatny"]
         P -->|"1"| R["Adres publiczny"]
-        Q --> S["SHA-256 → następny mnemonic"]
+        Q --> S["SHA-256<br/>Nowy mnemonic"]
         R --> S
-        S -->|"kolejna litera"| N
-        S -->|"ostatnia litera"| U["Mnemonic B — finalne 24 słowa<br/>oddzielny portfel Bitcoin"]
+        S -->|"następna"| N
+        S -->|"koniec"| U["Mnemonic B<br/>24 słowa<br/>Portfel Bitcoin B"]
         U --> V["BIP-39 seed"]
         V --> W["BIP-44 Bitcoin<br/>m/44'/0'/0'/0/0"]
-        W --> X["Adres publiczny Bitcoin"]
-        W --> Y["Klucz prywatny pierwszego adresu"]
+        W --> X["Adres publiczny<br/>Bitcoin"]
+        W --> Y["Klucz prywatny<br/>pierwszego adresu"]
     end
 
-    U -. "brak praktycznej drogi wstecz" .-> Z["Nie można odzyskać<br/>kodu swd1/swd2 ani Mnemonika A"]
+    U -. "brak odwrotności" .-> Z["Nie można odzyskać<br/>kodu swd1/swd2<br/>ani Mnemonika A"]
 ```
 
 `swd2` koduje prefiks entropii w alfabecie 52 znaków (`a-zA-Z`), dlatego dla mnemonika 24-wyrazowego hasło ma 38 zamiast 46 znaków, bez zmniejszania liczby zakodowanych bitów. Wielkość liter ma znaczenie i wpływa na wynik `wallet-decoder`. Para `hasło + liczba` zawiera tę samą tajną entropię co mnemonic i musi być chroniona równie starannie.
