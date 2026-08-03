@@ -1,4 +1,7 @@
-# Model bezpieczeństwa
+# 🛡️ Model bezpieczeństwa
+
+> [!WARNING]
+> Formaty `swd1`/`swd2` są kodowaniem, nie szyfrowaniem ani schematem dzielenia sekretu. Dla mnemonika 24-wyrazowego hasło przenosi 216 bitów entropii, a liczba 40 bitów entropii i publiczne metadane kontrolne. Ujawnienie samego hasła pozostawia przestrzeń poszukiwania rzędu `2^40`, więc nie traktuj liczby jako silnego drugiego składnika.
 
 ## Co ten projekt zapewnia
 
@@ -17,7 +20,7 @@
 - nie odzyskuje hasła oryginalnego `wallet-decoder` z jego wyniku;
 - nie zastępuje sprzętowego portfela, metalowego backupu ani audytu kryptograficznego.
 
-Hasło `swd1`/`swd2` i liczba są razem równoważne mnemonicowi. Utrata jednego elementu uniemożliwia odzyskanie, a ujawnienie obu daje dostęp do portfela. W `swd2` wielkość liter jest istotna; zapisuj ją jednoznacznie i nie polegaj na automatycznej korekcie tekstu.
+Hasło `swd1`/`swd2` i liczba są razem równoważne mnemonicowi. Utrata jednego elementu uniemożliwia zwykłe odzyskanie narzędziem, a ujawnienie obu daje dostęp do portfela. Nie oznacza to jednak równorzędnego podziału bezpieczeństwa: hasło zawiera większość entropii. W `swd2` wielkość liter jest istotna; zapisuj ją jednoznacznie i nie polegaj na automatycznej korekcie tekstu.
 
 `swd1` i `swd2` odtwarzają tę samą entropię wejściową, ale nie są zamienne jako dane wejściowe trybu `legacy`. Zmiana wersji zmienia hasło i liczbę, a więc również finalny mnemonic i adres Bitcoin wygenerowany przez `wallet-decoder`.
 
@@ -28,8 +31,9 @@ Hasło `swd1`/`swd2` i liczba są razem równoważne mnemonicowi. Utrata jednego
 3. Najpierw wykonaj próbę na mnemonic bez środków.
 4. Sprawdź round-trip: `encode`, następnie `decode`, a wyniki porównaj znak po znaku.
 5. Nie używaj schowka, historii terminala, synchronizowanych notatek ani zdjęć.
-6. Przechowuj hasło i liczbę w dwóch kontrolowanych lokalizacjach, uwzględniając ryzyko trwałej utraty jednej części.
+6. Traktuj pełny kod jak mnemonic. Jeżeli rozdzielasz pola organizacyjnie, nie zakładaj, że sama liczba zapewnia silną ochronę po ujawnieniu hasła.
 7. Nie traktuj 24-bitowego tagu jako ochrony przed celową modyfikacją.
+8. Do rzeczywistego, progowego podziału seeda użyj niezależnie przeanalizowanego schematu dzielenia sekretu lub szyfrowanego magazynu, a nie składni `hasło + liczba`.
 
 W backupie papierowym preferuj czteropolowy zapis `format:hasło:liczba:liczba_słów`. Zachowaj dokładną wielkość liter `swd2`, nie dziel hasła spacjami i wykonaj próbne odtworzenie przed zdeponowaniem kopii. Dodatkowa liczba słów pomaga wykrywać błędy, ale nie zastępuje sumy kontrolnej ani drugiej, niezależnej kopii.
 

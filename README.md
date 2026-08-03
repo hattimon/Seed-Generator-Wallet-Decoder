@@ -1,13 +1,20 @@
-# Seed Generator Wallet Decoder
+# 🔐 Seed Generator Wallet Decoder
+
+![Przepływ Seed Generator Wallet Decoder](./assets/seed-generator-wallet-decoder-flow.png)
+
+> [!CAUTION]
+> To eksperymentalne narzędzie edukacyjne, a nie audytowany portfel ani szyfrowanie seeda. Używaj go offline, najpierw na pustym portfelu. Przed użyciem z realnymi środkami wymagany jest niezależny audyt kryptograficzny.
+
+**Szybka nawigacja:** [🔄 przepływ](#przeplyw) · [📦 instalacja](#instalacja) · [🧭 użycie](#uzycie) · [📝 backup papierowy](#backup-papierowy) · [🛡️ audyt](#audyt)
 
 Lokalne narzędzie do **dokładnego, odwracalnego** przekształcania angielskiego mnemonika BIP-39 na parę `hasło + liczba` i z powrotem.
 
-Projekt powstał jako bezpieczna realizacja przepływu łączącego:
+Projekt powstał jako jawna, lokalna realizacja przepływu łączącego:
 
 - [Rav3nPL/SeedGenerator](https://github.com/Rav3nPL/SeedGenerator/tree/master) — źródło mnemonika wygenerowanego z kart i czasu kliknięć,
 - [hattimon/wallet-decoder](https://github.com/hattimon/wallet-decoder) — inspirację interfejsem `hasło + liczba` oraz osobny tryb zgodności dla Bitcoin.
 
-## Najważniejsze ograniczenie oryginalnej metody
+## ⚠️ Najważniejsze ograniczenie oryginalnej metody
 
 `wallet-decoder` nie dekoduje seeda do hasła. Jest generatorem jednokierunkowym:
 
@@ -20,7 +27,9 @@ Nie da się praktycznie znaleźć hasła i liczby, które odtworzą dowolny, wcz
 1. `encode` / `decode` — odwracalne formaty `swd1` i `swd2`, które gwarantują odzyskanie identycznego mnemonika;
 2. `legacy` — zgodny z algorytmem `wallet-decoder` dla domyślnej sieci Bitcoin, ale celowo opisany jako jednokierunkowy.
 
-## Przepływ właściwy dla tego projektu
+<a id="przeplyw"></a>
+
+## 🔄 Przepływ właściwy dla tego projektu
 
 ```mermaid
 flowchart TD
@@ -64,14 +73,19 @@ flowchart TD
 
 `swd2` koduje prefiks entropii w alfabecie 52 znaków (`a-zA-Z`), dlatego dla mnemonika 24-wyrazowego hasło ma 38 zamiast 46 znaków, bez zmniejszania liczby zakodowanych bitów. Wielkość liter ma znaczenie i wpływa na wynik `wallet-decoder`. Para `hasło + liczba` zawiera tę samą tajną entropię co mnemonic i musi być chroniona równie starannie.
 
-## Wymagania i instalacja
+> [!WARNING]
+> `hasło` i `liczba` nie są równorzędnymi udziałami sekretu ani mechanizmem 2FA. Dla 24 słów hasło zawiera 216 z 256 bitów entropii, a brakująca liczba ukrywa tylko 40 bitów. Ujawnienie samego hasła może więc pozwolić zaawansowanemu napastnikowi przeszukać brakującą część, jeżeli ma znany adres lub inny sposób rozpoznania właściwego portfela. Szczegóły: [raport audytu](./SECURITY_AUDIT.md#aud-01--asymetryczny-podział-entropii).
+
+<a id="instalacja"></a>
+
+## 📦 Wymagania i instalacja
 
 - Node.js 22 lub nowszy;
 - Git;
 - internet jest potrzebny tylko do sklonowania repozytorium i wykonania `npm ci`;
 - wszystkie operacje na seedzie odbywają się lokalnie.
 
-### Windows PowerShell
+### 🪟 Windows PowerShell
 
 ```powershell
 git clone https://github.com/hattimon/Seed-Generator-Wallet-Decoder.git
@@ -80,7 +94,7 @@ npm ci
 npm run check
 ```
 
-### Linux / macOS
+### 🐧 Linux / macOS
 
 ```bash
 git clone https://github.com/hattimon/Seed-Generator-Wallet-Decoder.git
@@ -91,7 +105,7 @@ npm run check
 
 Zależności są przypięte do konkretnych wersji w `package-lock.json`.
 
-### Uruchamianie
+### 🚀 Uruchamianie
 
 ```powershell
 npm run encode
@@ -101,7 +115,7 @@ npm run legacy:12
 npm run legacy:24
 ```
 
-### Aktualizacja istniejącej instalacji
+### 🔄 Aktualizacja istniejącej instalacji
 
 ```powershell
 git pull origin main
@@ -109,9 +123,11 @@ npm ci
 npm run check
 ```
 
-## Użycie
+<a id="uzycie"></a>
 
-### 1. SeedGenerator -> hasło i liczba
+## 🧭 Użycie
+
+### 1️⃣ SeedGenerator → hasło i liczba
 
 Wygeneruj mnemonic w SeedGenerator, zamknij inne aplikacje i uruchom:
 
@@ -134,7 +150,7 @@ npm run encode:v1
 
 Istniejące kody `swd1` pozostają w pełni obsługiwane.
 
-#### Zgodność `swd1` i `swd2`
+#### 🔁 Zgodność `swd1` i `swd2`
 
 Oba formaty odtwarzają ten sam wejściowy mnemonic A, ale ich hasła i liczby są różne. W konsekwencji przekazanie danych `swd2` do `wallet-decoder` wygeneruje inny mnemonic B niż dane `swd1`.
 
@@ -142,7 +158,9 @@ Oba formaty odtwarzają ten sam wejściowy mnemonic A, ale ich hasła i liczby s
 - aby ponownie wygenerować kod `swd1` z mnemonika A, użyj `npm run encode:v1`;
 - nie zastępuj backupu `swd1` kodem `swd2`, jeżeli zależy Ci na tym samym finalnym portfelu legacy.
 
-#### Minimalny zapis na papierze
+<a id="backup-papierowy"></a>
+
+#### 📝 Minimalny zapis na papierze
 
 Technicznie wystarczają trzy pola, ponieważ wersja i długość mnemonika są już zapisane wewnątrz liczby:
 
@@ -167,7 +185,7 @@ A02  swd2:<hasło-2>:<liczba-2>:24
 
 Identyfikator `A01`/`A02` nie jest wpisywany do programu. Nie zmieniaj wielkości liter, nie dodawaj spacji wewnątrz kodu i zapisuj dwukropki. Dla dalszego przepływu przez obecny tryb `legacy` sieć jest stała (`Bitcoin`); warto obok backupu zanotować `legacy: Bitcoin/24`.
 
-### 2. Hasło i liczba -> identyczny seed
+### 2️⃣ Hasło i liczba → identyczny seed
 
 ```powershell
 npm run decode
@@ -175,7 +193,7 @@ npm run decode
 
 Wklej kod trzy- lub czteropolowy w wersji `swd1` albo `swd2`. Program rozpozna wersję, zweryfikuje sumę kontrolną i odtworzy dokładnie ten sam mnemonic.
 
-### 3. Tryb zgodności z wallet-decoder
+### 3️⃣ Tryb zgodności z wallet-decoder
 
 ```powershell
 npm run legacy:24
@@ -183,7 +201,7 @@ npm run legacy:24
 
 Użyj `legacy:12` albo `legacy:24`. Obsługiwana jest sieć Bitcoin (domyślna ścieżka `m/44'/0'/0'/0/index`). Ten tryb zachowuje regułę liter `A-Z/a-z`, binarny wzorzec liczby oraz wybór klucza prywatnego/adresu publicznego z oryginału. Wielkość liter hasła zmienia wynik. Wyniku nie można odwrócić do hasła.
 
-## Automatyzacja bez argumentów zawierających sekrety
+## 🤖 Automatyzacja bez argumentów zawierających sekrety
 
 Przy wejściu potokowym `encode` przyjmuje mnemonic, a `decode` pełny kod. Nie przekazuj prawdziwego seeda jako argumentu procesu ani nie zapisuj go w historii powłoki.
 
@@ -194,7 +212,7 @@ Get-Content -Raw .\recovery-code.txt | npm --silent run decode:json
 
 Po użyciu bezpiecznie usuń pliki tymczasowe zgodnie z zasadami swojego systemu. Program sam nie zapisuje seedów ani kluczy na dysku.
 
-## Weryfikacja
+## 🧪 Weryfikacja
 
 ```powershell
 npm run check
@@ -202,4 +220,10 @@ npm run check
 
 Testy obejmują wszystkie długości entropii BIP-39: 128, 160, 192, 224 i 256 bitów, round-trip `swd1` i `swd2`, zgodność istniejących kodów `swd1`, rozróżnianie wielkości liter, wykrywanie zmian hasła/liczby oraz wektor trybu legacy porównany z oryginalnym skryptem.
 
-Przed użyciem z realnymi środkami wykonaj niezależny audyt kodu i test na pustym portfelu. Szczegóły formatu są w [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), a model bezpieczeństwa w [docs/SECURITY.md](./docs/SECURITY.md).
+<a id="audyt"></a>
+
+## 🛡️ Audyt bezpieczeństwa
+
+Audyt ręczny z 3 sierpnia 2026 r. nie wykazał krytycznego błędu implementacyjnego, ale wskazał jedno istotne ryzyko modelu backupu: asymetryczny podział entropii `216 + 40 bitów` dla mnemonika 24-wyrazowego. `npm run check` zakończył się wynikiem `20/20`, a `npm audit --omit=dev` wynikiem `0 vulnerabilities` w chwili audytu.
+
+Pełny zakres, ustalenia, ograniczenia i rekomendacje znajdują się w [SECURITY_AUDIT.md](./SECURITY_AUDIT.md). Szczegóły formatu są w [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), a model zagrożeń w [docs/SECURITY.md](./docs/SECURITY.md).
