@@ -1,0 +1,29 @@
+{
+  "name": "seed-generator-wallet-decoder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline, reversible BIP-39 mnemonic codec plus a Bitcoin-compatible wallet-decoder legacy generator.",
+  "type": "module",
+  "bin": {
+    "seed-codec": "./src/cli.js"
+  },
+  "scripts": {
+    "encode": "node ./src/cli.js encode",
+    "encode:json": "node ./src/cli.js encode --json",
+    "decode": "node ./src/cli.js decode",
+    "decode:json": "node ./src/cli.js decode --json",
+    "legacy": "node ./src/cli.js legacy",
+    "legacy:12": "node ./src/cli.js legacy --words 12",
+    "legacy:24": "node ./src/cli.js legacy --words 24",
+    "legacy:json": "node ./src/cli.js legacy --json",
+    "test": "node --test",
+    "check": "node --check ./src/cli.js && node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@scure/bip32": "2.2.0",
+    "@scure/bip39": "2.2.0"
+  }
+}
