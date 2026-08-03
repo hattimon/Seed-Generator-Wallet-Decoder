@@ -34,15 +34,46 @@ Hasło `swd1` jest wyliczanym kodem odzyskiwania, a nie dowolnym hasłem wybrany
 ## Wymagania i instalacja
 
 - Node.js 22 lub nowszy;
-- internet jest potrzebny tylko do pierwszego `npm install`;
+- Git;
+- internet jest potrzebny tylko do sklonowania repozytorium i wykonania `npm ci`;
 - wszystkie operacje na seedzie odbywają się lokalnie.
 
+### Windows PowerShell
+
 ```powershell
-npm install
-npm test
+git clone https://github.com/hattimon/Seed-Generator-Wallet-Decoder.git
+Set-Location Seed-Generator-Wallet-Decoder
+npm ci
+npm run check
+```
+
+### Linux / macOS
+
+```bash
+git clone https://github.com/hattimon/Seed-Generator-Wallet-Decoder.git
+cd Seed-Generator-Wallet-Decoder
+npm ci
+npm run check
 ```
 
 Zależności są przypięte do konkretnych wersji w `package-lock.json`.
+
+### Uruchamianie
+
+```powershell
+npm run encode
+npm run decode
+npm run legacy:12
+npm run legacy:24
+```
+
+### Aktualizacja istniejącej instalacji
+
+```powershell
+git pull origin main
+npm ci
+npm run check
+```
 
 ## Użycie
 
