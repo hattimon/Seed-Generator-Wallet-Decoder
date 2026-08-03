@@ -30,3 +30,11 @@ test('legacy odrzuca dane spoza kontraktu oryginału', () => {
     LegacyGeneratorError,
   );
 });
+
+test('wielkość liter hasła zmienia wynik wallet-decoder', () => {
+  const upperCase = generateLegacyBitcoin({ password: 'Test', decodeNumber: 13, wordCount: 24 });
+  const lowerCase = generateLegacyBitcoin({ password: 'test', decodeNumber: 13, wordCount: 24 });
+
+  assert.notEqual(upperCase.mnemonic, lowerCase.mnemonic);
+  assert.notEqual(upperCase.address, lowerCase.address);
+});

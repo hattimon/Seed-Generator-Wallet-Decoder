@@ -7,21 +7,23 @@ const HELP = `
 Seed Generator Wallet Decoder
 
 Użycie:
-  npm run encode              mnemonic BIP-39 -> hasło + liczba
+  npm run encode              mnemonic BIP-39 -> kod swd2 base52 (a-zA-Z)
+  npm run encode:v1           zgodnościowy kod swd1 base26 (a-z)
   npm run decode              hasło + liczba -> ten sam mnemonic BIP-39
   npm run legacy:12|legacy:24
                               generator zgodny z hattimon/wallet-decoder dla Bitcoin
-  npm --silent run encode:json|decode:json|legacy:json
+  npm --silent run encode:json|encode:v1:json|decode:json|legacy:json
                               warianty do automatyzacji przez stdin/stdout
 
 Opcje:
   --json                      wynik w JSON
+  --format swd1|swd2          format kodowania (domyślnie swd2)
   --words 12|24               liczba słów w trybie legacy (domyślnie 24)
   --help                      ta pomoc
 
 Sekrety są odczytywane bez wyświetlania znaków. Przy wejściu potokowym:
   encode oczekuje mnemonika w jednej wartości,
-  decode oczekuje pełnego kodu swd1:hasło:liczba,
+  decode oczekuje kodu format:hasło:liczba lub papierowego format:hasło:liczba:liczba_słów,
   legacy oczekuje JSON: {"password":"...","number":"...","wordCount":24}.
 `;
 
@@ -102,9 +104,11 @@ function printEncodeResult(result, json) {
   }
 
   console.log('\nKod odzyskiwania utworzony poprawnie:');
+  console.log(`Format: ${result.format}`);
   console.log(`Hasło: ${result.password}`);
   console.log(`Liczba: ${result.number}`);
-  console.log(`Pełny kod: ${result.recoveryCode}`);
+  console.log(`Kod minimalny: ${result.recoveryCode}`);
+  console.log(`Kod papierowy: ${result.paperCode}`);
   console.log(`Liczba słów: ${result.wordCount}`);
   console.log('\nTo nie jest szyfrowanie. Kod należy chronić dokładnie tak samo jak mnemonic.');
 }
@@ -124,16 +128,17 @@ function printDecodeResult(result, json) {
   console.log(`Liczba słów: ${result.wordCount}`);
 }
 
-async function runEncode(json) {
+async function runEncode(args, json) {
+  const format = optionValue(args, '--format', 'swd2');
   const mnemonic = process.stdin.isTTY
     ? await readHidden('Wklej mnemonic BIP-39 z SeedGenerator: ')
     : await readAllStdin();
-  printEncodeResult(encodeMnemonic(mnemonic), json);
+  printEncodeResult(encodeMnemonic(mnemonic, { format }), json);
 }
 
 async function runDecode(json) {
   const code = process.stdin.isTTY
-    ? await readHidden('Wklej pełny kod swd1:hasło:liczba: ')
+    ? await readHidden('Wklej pełny kod swd1/swd2:hasło:liczba: ')
     : await readAllStdin();
   printDecodeResult(decodeRecoveryCode(code), json);
 }
@@ -184,7 +189,7 @@ async function main() {
   const command = args[0];
   const json = hasFlag(args, '--json');
 
-  if (command === 'encode') return runEncode(json);
+  if (command === 'encode') return runEncode(args.slice(1), json);
   if (command === 'decode') return runDecode(json);
   if (command === 'legacy') return runLegacy(args.slice(1), json);
   throw new Error(`Nieznane polecenie: ${command}. Użyj --help.`);

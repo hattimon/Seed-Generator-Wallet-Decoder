@@ -2,16 +2,27 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { entropyToMnemonic, mnemonicToEntropy } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 
-const FORMAT_NAME = 'swd1';
-const FORMAT_VERSION = 1;
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
+const FORMAT_CONFIGS = Object.freeze({
+  swd1: Object.freeze({
+    name: 'swd1',
+    version: 1,
+    alphabet: 'abcdefghijklmnopqrstuvwxyz',
+    tagDomain: Buffer.from('SeedGeneratorWalletDecoder/recovery-v1\0', 'utf8'),
+  }),
+  swd2: Object.freeze({
+    name: 'swd2',
+    version: 2,
+    alphabet: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    tagDomain: Buffer.from('SeedGeneratorWalletDecoder/recovery-v2\0', 'utf8'),
+  }),
+});
+const DEFAULT_FORMAT = 'swd2';
 const TAIL_BITS = 40;
 const TAG_BITS = 24;
 const PAYLOAD_BITS = TAIL_BITS + TAG_BITS;
 const TAIL_MASK = (1n << BigInt(TAIL_BITS)) - 1n;
 const TAG_MASK = (1n << BigInt(TAG_BITS)) - 1n;
 const ENTROPY_LENGTHS = [16, 20, 24, 28, 32];
-const TAG_DOMAIN = Buffer.from('SeedGeneratorWalletDecoder/recovery-v1\0', 'utf8');
 
 export class RecoveryCodeError extends Error {
   constructor(message) {
@@ -42,26 +53,27 @@ function bigIntToBytes(value, byteLength) {
   return Uint8Array.from(Buffer.from(hex, 'hex'));
 }
 
-function passwordLengthForBits(bitLength) {
+function passwordLengthForBits(bitLength, radix) {
   const limit = 1n << BigInt(bitLength);
   let capacity = 1n;
   let length = 0;
 
   while (capacity < limit) {
-    capacity *= 26n;
+    capacity *= BigInt(radix);
     length += 1;
   }
 
   return length;
 }
 
-function encodeBase26(value, length) {
+function encodeBase(value, length, alphabet) {
   let remaining = value;
-  const chars = new Array(length).fill('a');
+  const radix = BigInt(alphabet.length);
+  const chars = new Array(length).fill(alphabet[0]);
 
   for (let position = length - 1; position >= 0; position -= 1) {
-    chars[position] = ALPHABET[Number(remaining % 26n)];
-    remaining /= 26n;
+    chars[position] = alphabet[Number(remaining % radix)];
+    remaining /= radix;
   }
 
   if (remaining !== 0n) {
@@ -71,23 +83,25 @@ function encodeBase26(value, length) {
   return chars.join('');
 }
 
-function decodeBase26(password) {
+function decodeBase(password, format) {
   let value = 0n;
+  const radix = BigInt(format.alphabet.length);
 
   for (const char of password) {
-    const digit = char.charCodeAt(0) - 97;
-    if (digit < 0 || digit >= 26) {
-      throw new RecoveryCodeError('Hasło odzyskiwania może zawierać tylko małe litery a-z.');
+    const digit = format.alphabet.indexOf(char);
+    if (digit === -1) {
+      const allowed = format.name === 'swd1' ? 'małe litery a-z' : 'litery a-z oraz A-Z';
+      throw new RecoveryCodeError(`Hasło ${format.name} może zawierać wyłącznie ${allowed}.`);
     }
-    value = value * 26n + BigInt(digit);
+    value = value * radix + BigInt(digit);
   }
 
   return value;
 }
 
-function calculateTag(entropy) {
+function calculateTag(entropy, format) {
   return createHash('sha256')
-    .update(TAG_DOMAIN)
+    .update(format.tagDomain)
     .update(entropy)
     .digest()
     .subarray(0, TAG_BITS / 8);
@@ -109,30 +123,45 @@ function parseNumber(number) {
   return BigInt(text);
 }
 
-export function encodeEntropy(entropyInput) {
+function getFormatByName(name) {
+  const format = FORMAT_CONFIGS[name];
+  if (!format) {
+    throw new RecoveryCodeError('Obsługiwane formaty kodowania to swd1 i swd2.');
+  }
+  return format;
+}
+
+function getFormatByVersion(version) {
+  return Object.values(FORMAT_CONFIGS).find((format) => format.version === version);
+}
+
+export function encodeEntropy(entropyInput, { format: formatName = DEFAULT_FORMAT } = {}) {
   const entropy = Uint8Array.from(entropyInput);
+  const format = getFormatByName(formatName);
   const lengthCode = assertSupportedEntropy(entropy);
   const entropyBits = entropy.length * 8;
   const prefixBits = entropyBits - TAIL_BITS;
   const entropyValue = bytesToBigInt(entropy);
   const prefix = entropyValue >> BigInt(TAIL_BITS);
   const tail = entropyValue & TAIL_MASK;
-  const passwordLength = passwordLengthForBits(prefixBits);
-  const password = encodeBase26(prefix, passwordLength);
-  const tag = bytesToBigInt(calculateTag(entropy));
-  const header = (BigInt(FORMAT_VERSION) << 3n) | BigInt(lengthCode);
+  const passwordLength = passwordLengthForBits(prefixBits, format.alphabet.length);
+  const password = encodeBase(prefix, passwordLength, format.alphabet);
+  const tag = bytesToBigInt(calculateTag(entropy, format));
+  const header = (BigInt(format.version) << 3n) | BigInt(lengthCode);
   const number = (header << BigInt(PAYLOAD_BITS)) | (tail << BigInt(TAG_BITS)) | tag;
+  const wordCount = (entropyBits + entropyBits / 32) / 11;
 
   return {
-    format: FORMAT_NAME,
+    format: format.name,
     password,
     number: number.toString(10),
-    recoveryCode: `${FORMAT_NAME}:${password}:${number}`,
-    wordCount: (entropyBits + entropyBits / 32) / 11,
+    recoveryCode: `${format.name}:${password}:${number}`,
+    paperCode: `${format.name}:${password}:${number}:${wordCount}`,
+    wordCount,
   };
 }
 
-export function decodeCredentials(password, numberInput) {
+export function decodeCredentials(password, numberInput, expectedFormatName) {
   if (typeof password !== 'string') {
     throw new RecoveryCodeError('Hasło odzyskiwania musi być tekstem.');
   }
@@ -143,26 +172,30 @@ export function decodeCredentials(password, numberInput) {
   const header = number >> BigInt(PAYLOAD_BITS);
   const version = Number(header >> 3n);
   const lengthCode = Number(header & 0b111n);
+  const format = getFormatByVersion(version);
 
-  if (version !== FORMAT_VERSION || !Number.isInteger(lengthCode) || !ENTROPY_LENGTHS[lengthCode]) {
+  if (!format || !Number.isInteger(lengthCode) || !ENTROPY_LENGTHS[lengthCode]) {
     throw new RecoveryCodeError('Nieobsługiwana wersja lub uszkodzony nagłówek liczby odzyskiwania.');
+  }
+  if (expectedFormatName && format.name !== expectedFormatName) {
+    throw new RecoveryCodeError('Prefiks kodu nie pasuje do wersji zapisanej w liczbie odzyskiwania.');
   }
 
   const entropyLength = ENTROPY_LENGTHS[lengthCode];
   const prefixBits = entropyLength * 8 - TAIL_BITS;
-  const expectedPasswordLength = passwordLengthForBits(prefixBits);
+  const expectedPasswordLength = passwordLengthForBits(prefixBits, format.alphabet.length);
   if (password.length !== expectedPasswordLength) {
     throw new RecoveryCodeError(`Nieprawidłowa długość hasła: oczekiwano ${expectedPasswordLength} liter.`);
   }
 
-  const prefix = decodeBase26(password);
+  const prefix = decodeBase(password, format);
   if (prefix >= (1n << BigInt(prefixBits))) {
     throw new RecoveryCodeError('Hasło odzyskiwania jest poza zakresem tego formatu.');
   }
 
   const entropyValue = (prefix << BigInt(TAIL_BITS)) | tail;
   const entropy = bigIntToBytes(entropyValue, entropyLength);
-  const expectedTag = calculateTag(entropy);
+  const expectedTag = calculateTag(entropy, format);
   const suppliedTagBytes = bigIntToBytes(suppliedTag, TAG_BITS / 8);
   if (!timingSafeEqual(Buffer.from(expectedTag), Buffer.from(suppliedTagBytes))) {
     throw new RecoveryCodeError('Suma kontrolna nie pasuje. Hasło lub liczba są błędne.');
@@ -170,14 +203,14 @@ export function decodeCredentials(password, numberInput) {
 
   const mnemonic = entropyToMnemonic(entropy, wordlist);
   return {
-    format: FORMAT_NAME,
+    format: format.name,
     mnemonic,
     entropyHex: Buffer.from(entropy).toString('hex'),
     wordCount: mnemonic.split(' ').length,
   };
 }
 
-export function encodeMnemonic(mnemonicInput) {
+export function encodeMnemonic(mnemonicInput, options) {
   const mnemonic = normalizeMnemonic(mnemonicInput);
   let entropy;
 
@@ -187,7 +220,7 @@ export function encodeMnemonic(mnemonicInput) {
     throw new RecoveryCodeError('Nieprawidłowy angielski mnemonic BIP-39 lub błędna suma kontrolna.');
   }
 
-  return encodeEntropy(entropy);
+  return encodeEntropy(entropy, options);
 }
 
 export function decodeRecoveryCode(recoveryCode) {
@@ -196,9 +229,16 @@ export function decodeRecoveryCode(recoveryCode) {
   }
 
   const parts = recoveryCode.trim().split(':');
-  if (parts.length !== 3 || parts[0] !== FORMAT_NAME) {
-    throw new RecoveryCodeError(`Kod musi mieć postać ${FORMAT_NAME}:hasło:liczba.`);
+  if (![3, 4].includes(parts.length) || !FORMAT_CONFIGS[parts[0]]) {
+    throw new RecoveryCodeError('Kod musi mieć postać format:hasło:liczba albo format:hasło:liczba:liczba_słów.');
   }
 
-  return decodeCredentials(parts[1], parts[2]);
+  const result = decodeCredentials(parts[1], parts[2], parts[0]);
+  if (parts.length === 4) {
+    if (!/^(12|15|18|21|24)$/u.test(parts[3]) || Number(parts[3]) !== result.wordCount) {
+      throw new RecoveryCodeError('Jawna liczba słów nie zgadza się z długością zapisaną w kodzie.');
+    }
+  }
+
+  return result;
 }
