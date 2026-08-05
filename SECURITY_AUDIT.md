@@ -1,17 +1,17 @@
-# 🛡️ Audyt bezpieczeństwa — 2026-08-03
+# 🛡️ Audyt bezpieczeństwa — 2026-08-05
 
 ## Podsumowanie
 
-Ręczny audyt wersji `1.1.0` na bazowym commicie `c115e6c` nie wykazał krytycznego błędu implementacyjnego w odwracalnym round-tripie `swd1`/`swd2` ani w sprawdzonym wektorze zgodności `wallet-decoder`. Projekt pozostaje jednak eksperymentalnym, niestandardowym kodekiem i nie przeszedł niezależnego audytu kryptograficznego.
+Ręczny audyt wersji `1.1.0` na bazowym commicie `7d42bd2` nie wykazał krytycznej ani wysokiej podatności implementacyjnej w odwracalnym round-tripie `swd1`/`swd2` ani w sprawdzonym wektorze zgodności `wallet-decoder`. Projekt pozostaje jednak eksperymentalnym, niestandardowym kodekiem i nie przeszedł formalnego audytu kryptograficznego przez wyspecjalizowaną firmę.
 
-Najważniejsze ustalenie dotyczy modelu backupu: `hasło + liczba` jest technicznym podziałem reprezentacji, a nie równorzędnym podziałem sekretu. Dla mnemonika 24-wyrazowego hasło zawiera 216 bitów entropii, natomiast liczba tylko 40 bitów tajnej entropii. Nie wolno przedstawiać tego jako 2FA ani bezpiecznego secret sharing.
+Para `hasło + liczba` jest zgodnie z założeniem jednym, gęstszym zapisem pełnej entropii. Wewnętrzny podział `216 + 40 bitów` nie ogranicza 256-bitowej entropii kompletnego kodu i nie stanowi podatności kodeka. Najistotniejsze ryzyka znajdują się przed kodekiem i wokół niego: ograniczona lub przejęta entropia, zmodyfikowany generator, zainfekowane środowisko oraz przechwycenie sekretów podczas wejścia, wyjścia albo pracy procesu.
 
 | Poziom | Liczba |
 | --- | ---: |
 | 🔴 Krytyczny | 0 |
-| 🟠 Wysoki w modelu rozdzielonego backupu | 1 |
+| 🟠 Wysoki — implementacja | 0 |
 | 🟡 Średni | 2 |
-| 🔵 Niski / informacyjny | 3 |
+| 🔵 Niski / informacyjny | 4 |
 
 ## Zakres i metoda
 
@@ -30,17 +30,32 @@ Wykonane polecenia:
 npm run check             -> 20/20 testów, 0 błędów
 npm audit --omit=dev      -> 0 znanych podatności
 npm ls --all              -> 5 przypiętych pakietów w drzewie produkcyjnym
+npm audit signatures      -> podpisy i attestacje 5/5 pakietów zweryfikowane
 ```
 
 Wynik `npm audit` jest migawką z dnia audytu, a nie gwarancją braku przyszłych lub nieznanych podatności.
 
+## Audyt aktualnego środowiska
+
+Przegląd wykonano 5 sierpnia 2026 r. w środowisku Windows x64 z Node.js `22.17.1`, npm `10.9.2` i Git `2.50.1.windows.1`.
+
+- kod w `src/` nie importuje modułów sieciowych i nie wykonuje `fetch`, WebSocket ani automatycznego zapisu plików;
+- zainstalowane drzewo produkcyjne zawiera 5 przypiętych pakietów `@scure`/`@noble`;
+- nie znaleziono skryptów lifecycle `preinstall`, `install` ani `postinstall` w zainstalowanych pakietach;
+- `npm audit --omit=dev` zgłosił 0 znanych podatności;
+- `npm audit signatures` potwierdził podpisy rejestru oraz attestacje wszystkich 5 pakietów;
+- środowisko miało aktywne fizyczne i wirtualne interfejsy sieciowe, dlatego nie było środowiskiem offline odpowiednim do przetwarzania prawdziwego mnemonika;
+- status ochrony antywirusowej nie był dostępny w kontekście audytu, więc nie można potwierdzić braku malware, keyloggera ani narzędzia przechwytującego ekran lub schowek.
+
+Ten wynik potwierdza właściwości sprawdzonej konfiguracji, ale nie certyfikuje komputera użytkownika. Brak wykrytej funkcji sieciowej w aplikacji nie chroni przed złośliwym systemem operacyjnym lub innym procesem działającym na tym samym urządzeniu.
+
 ## Ustalenia
 
-### AUD-01 — Asymetryczny podział entropii
+### AUD-01 — Podział reprezentacji `hasło + liczba`
 
-**Poziom:** 🟠 wysoki, jeżeli pola są traktowane jako dwa niezależne sekrety
+**Poziom:** 🔵 informacyjny
 
-**Status:** otwarty — zachowanie wynika z formatu; dodano ostrzeżenia
+**Status:** zgodny z założonym modelem
 
 Dla 24 słów BIP-39 kodek dzieli 256 bitów entropii na:
 
@@ -48,9 +63,19 @@ Dla 24 słów BIP-39 kodek dzieli 256 bitów entropii na:
 - 40-bitowy ogon zapisany w liczbie;
 - 24-bitowy tag i nagłówek, które nie są tajne.
 
-Jeżeli napastnik pozna samo hasło, może enumerować około `2^40` ogonów. Przy znanym adresie portfela, historii transakcji lub innym celu weryfikacyjnym może rozpoznać właściwego kandydata; bez takiego celu pozostaje mu `2^40` możliwych mnemoniców. To znacznie mniej niż 256-bitowa przestrzeń pełnego losowego mnemonika. Odwrotna sytuacja — ujawnienie samej liczby — pozostawia większość entropii nieznaną, nawet gdy zawarty w liczbie tag służy do filtrowania prób.
+Kompletny rekord zachowuje wszystkie 256 bitów entropii. Rozkład informacji pomiędzy polami nie obniża bezpieczeństwa pełnego kodu, ponieważ projekt nie traktuje pól jako 2FA ani niezależnych udziałów sekretu. Znajomość kompletnego kodu jest równoważna znajomości mnemonika i tak należy go chronić.
 
-**Rekomendacja:** traktować pełny kod jak jedną reprezentację mnemonika. Do odpornego podziału między lokalizacje użyć osobnego, niezależnie przeanalizowanego schematu secret sharing albo szyfrowanego magazynu. Nie określać `hasło + liczba` jako 2FA.
+**Rekomendacja:** opisywać `hasło + liczba` jako jeden alternatywny zapis pełnego sekretu. Analiza pojedynczych pól ma znaczenie wyłącznie wtedy, gdy użytkownik sam nada im rolę granicy bezpieczeństwa, czego projekt nie zakłada.
+
+### ENV-01 — Źródło entropii i integralność środowiska
+
+**Poziom skutków:** 🟠 wysoki poza kodekiem
+
+**Status:** zależny od użytkownika i sposobu uruchomienia
+
+Kodek zachowuje dostarczone bity, ale nie może udowodnić, że pierwotna entropia była losowa, nieobciążona i wygenerowana przez niezmodyfikowane oprogramowanie. Przejęty SeedGenerator, przewidywalne źródło losowości, keylogger, malware, zdalny dostęp, nagrywanie ekranu lub aktywna synchronizacja schowka mogą ujawnić sekret niezależnie od poprawności SWD1/SWD2.
+
+**Rekomendacja:** zweryfikować generator i zależności przed odłączeniem urządzenia, a operację wykonać na czystym, dedykowanym systemie z fizycznie odłączoną siecią i wyłączonymi interfejsami radiowymi. Najpierw przeprowadzić pełny test na pustym portfelu.
 
 ### AUD-02 — Sekrety pojawiają się w wyjściu i pamięci procesu
 
@@ -109,12 +134,11 @@ Testy obejmują wszystkie dozwolone długości entropii, obie wersje formatu, b�
 
 ## Priorytety dalszych prac
 
-1. 🔴 Nie używać formatu jako 2FA ani równorzędnego podziału seeda.
+1. 🔴 Zweryfikować źródło entropii, generator i środowisko przed użyciem prawdziwego sekretu.
 2. 🟠 Dodać property-based testing/fuzzing parsera i round-tripu.
 3. 🟠 Opublikować niezależne wektory zgodności dla większej liczby wejść legacy.
-4. 🟡 Rozważyć osobny, wersjonowany format zaszyfrowanego backupu z uwierzytelnianiem zamiast skracania sekretu.
-5. 🟡 Dodać udokumentowaną procedurę reprodukowalnej, odłączonej instalacji zależności.
+4. 🟡 Dodać udokumentowaną procedurę reprodukowalnej, odłączonej instalacji zależności.
 
 ## Werdykt użytkowy
 
-Projekt nadaje się do edukacji, eksperymentów offline i testów na pustym portfelu. Ten audyt nie stanowi rekomendacji przechowywania realnych środków. Przed takim użyciem potrzebny jest niezależny audyt, pełny test odtworzeniowy i świadoma akceptacja ryzyka niestandardowego algorytmu.
+Pełny kod SWD1/SWD2 zachowuje źródłową entropię i nie traci jej wskutek podziału na `hasło + liczba`. W sprawdzonym kodzie nie znaleziono krytycznej ani wysokiej podatności implementacyjnej. Największe praktyczne ryzyko stanowi jakość entropii oraz urządzenie, na którym sekret jest generowany i przetwarzany. Badane środowisko było połączone z siecią, dlatego nie powinno być używane do prawdziwego mnemonika. Projekt pozostaje przeznaczony do edukacji, eksperymentów offline i testów na pustym portfelu do czasu formalnego audytu kryptograficznego.

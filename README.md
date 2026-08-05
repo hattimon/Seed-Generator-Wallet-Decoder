@@ -3,7 +3,7 @@
 ![Przepływ Seed Generator Wallet Decoder](./assets/seed-generator-wallet-decoder-flow.png)
 
 > [!CAUTION]
-> To eksperymentalne narzędzie edukacyjne, a nie audytowany portfel ani szyfrowanie seeda. Używaj go offline, najpierw na pustym portfelu. Przed użyciem z realnymi środkami wymagany jest niezależny audyt kryptograficzny.
+> To eksperymentalne narzędzie edukacyjne, a nie audytowany portfel ani szyfrowanie seeda. Bezpieczeństwo pełnego kodu zależy przede wszystkim od jakości źródłowej entropii oraz integralności środowiska, w którym generator i kodek są uruchamiane. Używaj go offline, najpierw na pustym portfelu.
 
 **Szybka nawigacja:** [🔄 przepływ](#przeplyw) · [📦 instalacja](#instalacja) · [🧭 użycie](#uzycie) · [📝 backup papierowy](#backup-papierowy) · [🛡️ audyt](#audyt)
 
@@ -73,8 +73,8 @@ flowchart TD
 
 `swd2` koduje prefiks entropii w alfabecie 52 znaków (`a-zA-Z`), dlatego dla mnemonika 24-wyrazowego hasło ma 38 zamiast 46 znaków, bez zmniejszania liczby zakodowanych bitów. Wielkość liter ma znaczenie i wpływa na wynik `wallet-decoder`. Para `hasło + liczba` zawiera tę samą tajną entropię co mnemonic i musi być chroniona równie starannie.
 
-> [!WARNING]
-> `hasło` i `liczba` nie są równorzędnymi udziałami sekretu ani mechanizmem 2FA. Dla 24 słów hasło zawiera 216 z 256 bitów entropii, a brakująca liczba ukrywa tylko 40 bitów. Ujawnienie samego hasła może więc pozwolić zaawansowanemu napastnikowi przeszukać brakującą część, jeżeli ma znany adres lub inny sposób rozpoznania właściwego portfela. Szczegóły: [raport audytu](./SECURITY_AUDIT.md#aud-01--asymetryczny-podział-entropii).
+> [!NOTE]
+> `hasło + liczba` jest jednym rekordem stanowiącym alternatywny zapis pełnej entropii, a nie mechanizmem 2FA ani schematem dzielenia sekretu. Wewnętrzny podział `216 + 40 bitów` nie ogranicza entropii kompletnego kodu. Najważniejsze ryzyka to słabe lub przejęte źródło entropii, zmodyfikowany generator, zainfekowane albo połączone z siecią środowisko oraz przechwycenie danych wejściowych lub wynikowych. Szczegóły: [raport audytu](./SECURITY_AUDIT.md).
 
 <a id="instalacja"></a>
 
@@ -224,6 +224,6 @@ Testy obejmują wszystkie długości entropii BIP-39: 128, 160, 192, 224 i 256 b
 
 ## 🛡️ Audyt bezpieczeństwa
 
-Audyt ręczny z 3 sierpnia 2026 r. nie wykazał krytycznego błędu implementacyjnego, ale wskazał jedno istotne ryzyko modelu backupu: asymetryczny podział entropii `216 + 40 bitów` dla mnemonika 24-wyrazowego. `npm run check` zakończył się wynikiem `20/20`, a `npm audit --omit=dev` wynikiem `0 vulnerabilities` w chwili audytu.
+Audyt kodu i środowiska z 5 sierpnia 2026 r. nie wykazał krytycznej ani wysokiej podatności implementacyjnej. Potwierdził, że pełna para `hasło + liczba` zachowuje całą entropię wejściową, natomiast bezpieczeństwo operacyjne zależy głównie od źródła entropii, integralności generatora i izolacji urządzenia. `npm run check` zakończył się wynikiem `20/20`, `npm audit --omit=dev` wynikiem `0 vulnerabilities`, a podpisy i attestacje wszystkich 5 pakietów produkcyjnych zostały zweryfikowane.
 
 Pełny zakres, ustalenia, ograniczenia i rekomendacje znajdują się w [SECURITY_AUDIT.md](./SECURITY_AUDIT.md). Szczegóły formatu są w [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md), a model zagrożeń w [docs/SECURITY.md](./docs/SECURITY.md).

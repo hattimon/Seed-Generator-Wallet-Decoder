@@ -1,7 +1,7 @@
 # 🛡️ Model bezpieczeństwa
 
-> [!WARNING]
-> Formaty `swd1`/`swd2` są kodowaniem, nie szyfrowaniem ani schematem dzielenia sekretu. Dla mnemonika 24-wyrazowego hasło przenosi 216 bitów entropii, a liczba 40 bitów entropii i publiczne metadane kontrolne. Ujawnienie samego hasła pozostawia przestrzeń poszukiwania rzędu `2^40`, więc nie traktuj liczby jako silnego drugiego składnika.
+> [!IMPORTANT]
+> Formaty `swd1`/`swd2` są alternatywnym kodowaniem pełnej entropii, nie szyfrowaniem. Para `hasło + liczba` jest jednym rekordem i projekt nie zakłada używania jej jako 2FA ani kryptograficznego podziału sekretu. Wewnętrzny podział bitów nie zmniejsza entropii kompletnego kodu.
 
 ## Co ten projekt zapewnia
 
@@ -20,20 +20,19 @@
 - nie odzyskuje hasła oryginalnego `wallet-decoder` z jego wyniku;
 - nie zastępuje sprzętowego portfela, metalowego backupu ani audytu kryptograficznego.
 
-Hasło `swd1`/`swd2` i liczba są razem równoważne mnemonicowi. Utrata jednego elementu uniemożliwia zwykłe odzyskanie narzędziem, a ujawnienie obu daje dostęp do portfela. Nie oznacza to jednak równorzędnego podziału bezpieczeństwa: hasło zawiera większość entropii. W `swd2` wielkość liter jest istotna; zapisuj ją jednoznacznie i nie polegaj na automatycznej korekcie tekstu.
+Hasło `swd1`/`swd2` i liczba są razem równoważne mnemonicowi. Ujawnienie kompletnego kodu ujawnia pełny sekret. Podział na dwa pola służy zgodności formatu i przepływu `wallet-decoder`, a nie tworzeniu granicy bezpieczeństwa pomiędzy polami. W `swd2` wielkość liter jest istotna; zapisuj ją jednoznacznie i nie polegaj na automatycznej korekcie tekstu.
 
 `swd1` i `swd2` odtwarzają tę samą entropię wejściową, ale nie są zamienne jako dane wejściowe trybu `legacy`. Zmiana wersji zmienia hasło i liczbę, a więc również finalny mnemonic i adres Bitcoin wygenerowany przez `wallet-decoder`.
 
 ## Zalecany sposób użycia
 
-1. Uruchom aplikację na czystym, odłączonym od sieci systemie.
-2. Zweryfikuj hash i źródło Node.js oraz zależności.
-3. Najpierw wykonaj próbę na mnemonic bez środków.
-4. Sprawdź round-trip: `encode`, następnie `decode`, a wyniki porównaj znak po znaku.
-5. Nie używaj schowka, historii terminala, synchronizowanych notatek ani zdjęć.
-6. Traktuj pełny kod jak mnemonic. Jeżeli rozdzielasz pola organizacyjnie, nie zakładaj, że sama liczba zapewnia silną ochronę po ujawnieniu hasła.
-7. Nie traktuj 24-bitowego tagu jako ochrony przed celową modyfikacją.
-8. Do rzeczywistego, progowego podziału seeda użyj niezależnie przeanalizowanego schematu dzielenia sekretu lub szyfrowanego magazynu, a nie składni `hasło + liczba`.
+1. Zweryfikuj źródło entropii i integralność używanego SeedGeneratora.
+2. Uruchom aplikację na czystym systemie fizycznie odłączonym od sieci i wyłącz zbędne interfejsy radiowe.
+3. Zweryfikuj źródło Node.js, repozytorium, lockfile oraz zależności przed przejściem offline.
+4. Najpierw wykonaj próbę na mnemonic bez środków.
+5. Sprawdź round-trip: `encode`, następnie `decode`, a wyniki porównaj znak po znaku.
+6. Nie używaj schowka, historii terminala, synchronizowanych notatek ani zdjęć.
+7. Traktuj pełny kod jak mnemonic i nie traktuj 24-bitowego tagu jako ochrony przed celową modyfikacją.
 
 W backupie papierowym preferuj czteropolowy zapis `format:hasło:liczba:liczba_słów`. Zachowaj dokładną wielkość liter `swd2`, nie dziel hasła spacjami i wykonaj próbne odtworzenie przed zdeponowaniem kopii. Dodatkowa liczba słów pomaga wykrywać błędy, ale nie zastępuje sumy kontrolnej ani drugiej, niezależnej kopii.
 

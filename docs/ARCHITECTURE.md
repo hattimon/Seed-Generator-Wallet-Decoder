@@ -72,9 +72,9 @@ SHA-256("SeedGeneratorWalletDecoder/recovery-v2\0" || entropy)
 
 Tag służy do wykrywania pomyłek, nie do uwierzytelniania ani szyfrowania. Szansa przypadkowego niewykrycia błędnej pary to około 1 na 16,7 miliona.
 
-### Konsekwencja podziału `prefix/tail`
+### Znaczenie podziału `prefix/tail`
 
-Dla entropii 256-bitowej hasło koduje 216-bitowy prefiks, a liczba zawiera 40-bitowy ogon. Nagłówek oraz 24-bitowy tag są metadanymi kontrolnymi i nie zwiększają tajności ogona. Taki podział służy formatowaniu danych, nie zapewnia równorzędnych udziałów sekretu: po ujawnieniu hasła do przeszukania pozostaje `2^40` kandydatów. Gdy znany jest adres portfela lub inny cel weryfikacyjny, pozwala on rozpoznać właściwego kandydata. Bez takiego celu pozostaje `2^40` możliwych mnemoniców. Z tego powodu kodu `swd1`/`swd2` nie należy opisywać jako 2FA ani kryptograficznego secret sharing.
+Dla entropii 256-bitowej hasło koduje 216-bitowy prefiks, a liczba zawiera 40-bitowy ogon. Nagłówek oraz 24-bitowy tag są metadanymi kontrolnymi. Podział służy formatowaniu danych i zgodności z interfejsem `hasło + liczba`; kompletny rekord nadal reprezentuje wszystkie 256 bitów entropii bez ich ograniczania. Projekt nie przypisuje osobnych właściwości bezpieczeństwa każdemu polu i nie opisuje tego układu jako 2FA ani kryptograficznego secret sharing.
 
 ## Dlaczego oryginalnego wallet-decoder nie da się użyć do odwracania
 
